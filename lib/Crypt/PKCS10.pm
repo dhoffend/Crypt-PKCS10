@@ -186,7 +186,18 @@ sub _convert_extensionRequest {
     my $extensionRequest = shift;
     my $parser = _init('extensionRequest');
     my $decoded = $parser->decode($extensionRequest) or confess $parser->error, ".. looks like damaged input";
-    foreach my $entry (@{$decoded}) {        
+
+    # directory string which seems to be a wrapped x509 extension sequence
+    # seen in cisco scep requests. As this violates the expeceted structure
+    # we surpress it until we know how to decode it    
+    if ($decoded->{DirectoryString}) {
+        warn 'wrapped extensionRequest - do not decode';
+        use Data::Dumper;
+        print Dumper $decoded;
+        return $decoded->{DirectoryString};
+    }
+
+    foreach my $entry (@{$decoded->{Extension}}) {
         if (defined $oids{ $entry->{'extnID'}}) {
             $entry->{'extnID'} = $oids{ $entry->{'extnID'} };
             my $parser = _init($entry->{'extnID'}) or confess "parser error: ", $entry->{'extnID'}, " needs entry in ASN.1 definition!";
@@ -194,7 +205,7 @@ sub _convert_extensionRequest {
             $entry->{'extnValue'} = $self->_mapExtensions($entry->{'extnID'}, $entry->{'extnValue'});
         }
     }
-    return $decoded;
+    return $decoded->{Extension};
 }
 
 sub _mapExtensions {
@@ -313,7 +324,15 @@ sub _init {
         Machine     UTF8String,
         Process     UTF8String}
 
-    extensionRequest ::= SEQUENCE OF Extension
+
+    --- Some Cisco iOS embed the extension in a T61String ---
+    
+    extensionRequest ::= ExtensionSequenceOrDirectoryString
+    
+    ExtensionSequenceOrDirectoryString ::= CHOICE {
+        Extension SEQUENCE OF Extension,
+        DirectoryString DirectoryString}
+    
     Extension ::= SEQUENCE {
       extnID    OBJECT IDENTIFIER,
       critical  BOOLEAN OPTIONAL,
