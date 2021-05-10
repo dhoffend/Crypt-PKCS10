@@ -1024,30 +1024,39 @@ sub _convert_attributes {
     my( $typeandvalues ) = @_;
 
     foreach my $entry ( @{$typeandvalues} ) {
-	my $oid = $entry->{type};
-	my $name = $oids{$oid};
-	$name = $variantNames{$name} if( defined $name && exists $variantNames{$name} );
+    my $oid = $entry->{type};
+    my $name = $oids{$oid};
+    $name = $variantNames{$name} if( defined $name && exists $variantNames{$name} );
 
-	next unless( defined $name );
+    next unless( defined $name );
 
-	$entry->{type} = $name;
+    $entry->{type} = $name;
 
-	if ($name eq 'extensionRequest') {
-	    $entry->{values} = $self->_convert_extensionRequest($entry->{values}[0]);
-	} else {
-	    my $parser = $self->_init( $name, 1 ) or next; # Skip unknown attributes
+    if ($name eq 'extensionRequest') {
+        $entry->{values} = $self->_convert_extensionRequest($entry->{values}[0]);
 
-	    if($entry->{values}[1]) {
-		confess( "Incomplete parsing of attribute type: $name" );
-	    }
-	    my $value = $entry->{values} = $parser->decode( $entry->{values}[0] ) or
-	      confess( "Looks like damaged input parsing attribute $name" );
+    } elsif ($name eq 'ENROLLMENT_NAME_VALUE_PAIR') {
+        my $parser = $self->_init( $name );
+        my @values = map {
+            $parser->decode( $_ ) or
+                confess( "Looks like damaged input parsing attribute $name" );
+        } (@{$entry->{values}});
+        $entry->{values} = \@values;
 
-	    if( exists $special{$name} ) {
-		my $action = $special{$name};
-		$entry->{values} = $action->( $self, $value, $name, $entry );
-	    }
-	}
+    } else {
+        my $parser = $self->_init( $name, 1 ) or next; # Skip unknown attributes
+
+        if($entry->{values}[1]) {
+            confess( "Incomplete parsing of attribute type: $name" );
+        }
+        my $value = $entry->{values} = $parser->decode( $entry->{values}[0] ) or
+        confess( "Looks like damaged input parsing attribute $name" );
+
+        if( exists $special{$name} ) {
+        my $action = $special{$name};
+        $entry->{values} = $action->( $self, $value, $name, $entry );
+        }
+    }
     }
     return $typeandvalues;
 }
