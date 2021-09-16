@@ -2474,6 +2474,7 @@ B<registerOID>.
  1.2.840.113549.1.9.1       emailAddress
  1.2.840.113549.1.9.2       unstructuredName
  1.2.840.113549.1.9.7       challengePassword
+ 1.2.840.113549.1.9.8       unstructuredAddress
  1.2.840.113549.1.9.14      extensionRequest
  1.2.840.113549.1.9.15      smimeCapabilities          (SMIMECapabilities)
  1.3.6.1.4.1.311.2.1.14     CERT_EXTENSIONS
